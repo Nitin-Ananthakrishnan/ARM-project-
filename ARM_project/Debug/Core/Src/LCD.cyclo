@@ -1,0 +1,10 @@
+../Core/Src/LCD.c:12:6:delay_ms	2
+../Core/Src/LCD.c:17:6:i2c_write	6
+../Core/Src/LCD.c:36:6:lcd_pulse	1
+../Core/Src/LCD.c:43:6:lcd_send_nibble	1
+../Core/Src/LCD.c:48:6:lcd_send_byte	1
+../Core/Src/LCD.c:54:6:lcd_cmd	1
+../Core/Src/LCD.c:59:6:lcd_data	1
+../Core/Src/LCD.c:64:6:lcd_init	1
+../Core/Src/LCD.c:82:6:lcd_set_cursor	2
+../Core/Src/LCD.c:87:6:lcd_print	2
