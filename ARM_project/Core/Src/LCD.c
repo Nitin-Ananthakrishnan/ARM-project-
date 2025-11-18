@@ -1,6 +1,8 @@
 #include "stm32f4xx.h"
 #include "LCD.h"
 #include "stdbool.h"
+#include "initialization.h"
+
 #define I2C_ADDR  0x27 << 1      // PCF8574 address (shifted for write)
 #define LCD_BACKLIGHT 0x08
 
@@ -16,7 +18,7 @@ typedef enum {
     MENU_FAN
 } MenuState;
 
-volatile uint8_t display_on = false;
+//volatile uint8_t display_on = false;
 MenuState menu_state = MENU_IDLE;
 
 uint8_t drip_time = 10;      // 10 or 15
@@ -24,7 +26,7 @@ uint8_t fan_mode = 0;        // 0 = auto, 1 = manual
 
 // ------------------ BUTTON READ -------------------
 uint8_t read_btn_pa4() { return (GPIOA->IDR & (1<<4)) != 0; }
-uint8_t read_btn_pa5() { return (GPIOA->IDR & (1<<5)) != 0; }
+uint8_t read_btn_pa5() { return (GPIOA->IDR & (1<<6)) != 0; }
 volatile uint8_t last_btn_pa4 = 0;
 volatile uint8_t last_btn_pa5 = 0;
 // ------------------- DELAY --------------------
@@ -39,7 +41,7 @@ uint8_t btn_pa4_pressed() {
 }
 
 uint8_t btn_pa5_pressed() {
-    uint8_t state = (GPIOA->IDR & (1<<5)) != 0;
+    uint8_t state = (GPIOA->IDR & (1<<6)) != 0;
     if (state && !last_btn_pa5) {
         last_btn_pa5 = 1;
         return 1;
@@ -150,7 +152,7 @@ void menu_show_fan() {
     lcd_set_cursor(0,0);
     lcd_print("Fan Mode:");
     lcd_set_cursor(1,0);
-    lcd_print("1)Auto 2)Manual");
+    lcd_print("1)On 2)Off");
 }
 
 void menu_show_message(const char *msg) {
@@ -158,10 +160,70 @@ void menu_show_message(const char *msg) {
     lcd_set_cursor(0,0);
     lcd_print(msg);
 }
+//void process_menu() {
+//    if (!display_on) {
+//        menu_state = MENU_IDLE;
+//        return;
+//    }
+//
+//    if (menu_state == MENU_IDLE) {
+//        menu_state = MENU_MAIN;
+//        menu_show_main();
+//        timer(500); // Small delay
+//    }
+//
+//    if (menu_state == MENU_MAIN) {
+//        // No need to check for waiting_for_input anymore
+//        if (btn_pa4_pressed()) {
+//            menu_state = MENU_DRIP;
+//            timer(500); // Small debounce delay
+//            menu_show_drip();
+//        }
+//        if (btn_pa5_pressed()) {
+//            menu_state = MENU_FAN;
+//            timer(500); // Small debounce delay
+//            menu_show_fan();
+//        }
+//        return;
+//    }
+//
+//    if (menu_state == MENU_DRIP) {
+//        if (btn_pa4_pressed()) {
+//            drip_time = 10;
+//            menu_show_message("Drip set 10 min");
+//            timer(500); // Wait to display message
+//            menu_state = MENU_IDLE;
+//        }
+//        if (btn_pa5_pressed()) {
+//            drip_time = 15;
+//            menu_show_message("Drip set 15 min");
+//            timer(500); // Wait to display message
+//            menu_state = MENU_IDLE;
+//        }
+//        return;
+//    }
+//
+//    if (menu_state == MENU_FAN) {
+//        if (btn_pa4_pressed()) {
+//            fan_mode = 0; // auto
+//            menu_show_message("Fan set Auto");
+//            timer(500);  // Wait to display message
+//            menu_state = MENU_IDLE;
+//        }
+//        if (btn_pa5_pressed()) {
+//            fan_mode = 1; // manual
+//            menu_show_message("Fan Manual");
+//            timer(500);  // Wait to display message
+//            menu_state = MENU_IDLE;
+//        }
+//        return;
+//    }
+//}
 void process_menu() {
 
     if (!display_on) {
         menu_state = MENU_IDLE;
+        lcd_cmd(0x01);
         return;
     }
 
@@ -169,48 +231,72 @@ void process_menu() {
         menu_state = MENU_MAIN;
         menu_show_main();
     }
+
+    // ----------- MAIN MENU -----------
     if (menu_state == MENU_MAIN) {
-        if (btn_pa4_pressed()) {
+        // Drip menu only if toggle ON
+        if (read_btn_pa4()) {
+        	if (!DRIP_TOGGLE_PIN) {
+        	            menu_show_message("Drip Disabled");
+        	            timer(500);
+        	            menu_state = MENU_IDLE;
+        	            return;
+        	        }
             menu_state = MENU_DRIP;
-            menu_delay(300);
+            timer(500);
             menu_show_drip();
         }
-        if (btn_pa5_pressed()) {
+
+        // Fan menu only if toggle ON
+        if (read_btn_pa5()) {
+        	 if (!FAN_TOGGLE_PIN) {
+        	            menu_show_message("Fan Disabled");
+        	            timer(500);
+        	            menu_state = MENU_IDLE;
+        	            return;
+        	        }
             menu_state = MENU_FAN;
-            menu_delay(300);
+            timer(500);
             menu_show_fan();
         }
         return;
     }
+
+    // ----------- DRIP MENU -----------
     if (menu_state == MENU_DRIP) {
-        if (btn_pa4_pressed()) {
+        // Only allow setting if toggle still ON
+        if (read_btn_pa4()) {
             drip_time = 10;
             menu_show_message("Drip set 10 min");
-            menu_delay(2000);
+            timer(500);
             menu_state = MENU_IDLE;
             return;
         }
-        if (btn_pa5_pressed()) {
+        if (read_btn_pa5()) {
             drip_time = 15;
             menu_show_message("Drip set 15 min");
-            menu_delay(2000);
+            timer(500);
             menu_state = MENU_IDLE;
             return;
         }
         return;
     }
+
+    // ----------- FAN MENU -----------
     if (menu_state == MENU_FAN) {
-        if (btn_pa4_pressed()) {
+        // Only allow setting if toggle still ON
+
+        if (read_btn_pa4()) {
             fan_mode = 0; // auto
-            menu_show_message("Fan set Auto");
-            menu_delay(2000);
+            menu_show_message("Fan on");
+            timer(500);
             menu_state = MENU_IDLE;
             return;
         }
-        if (btn_pa5_pressed()) {
+        if (read_btn_pa5()) {
             fan_mode = 1; // manual
-            menu_show_message("Fan Manual");
-            menu_delay(2000);
+            menu_show_message("Fan Off");
+            timer(500);
             menu_state = MENU_IDLE;
             return;
         }

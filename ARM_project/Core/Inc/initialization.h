@@ -4,13 +4,13 @@
  *  Created on: Nov 7, 2025
  *      Author: nitin
  */
-
 #ifndef INC_INITIALIZATION_H_
 #define INC_INITIALIZATION_H_
-
-extern volatile bool toggle_switch1;
-extern volatile bool toggle_switch2;
-extern bool display_on;
+#include <stdint.h>
+#include <stdbool.h>
+extern volatile bool DRIP_TOGGLE_PIN;
+extern volatile bool FAN_TOGGLE_PIN;
+extern volatile bool display_on;
 
 void GPIO_configuration(void);
 void EXTI0_IRQHandler(void);

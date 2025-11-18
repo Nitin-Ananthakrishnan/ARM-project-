@@ -4,8 +4,10 @@
 #include "initialization.h"  // Include the header for the declaration
 #include "LCD.h"
 
-volatile bool toggle_switch1=0;
-volatile bool toggle_switch2=0;
+volatile bool display_on = false;
+volatile bool DRIP_TOGGLE_PIN = false;
+volatile bool FAN_TOGGLE_PIN = false;
+
 volatile uint8_t last_exti0_state = 0;
 volatile uint8_t last_exti1_state = 0;
 volatile uint8_t last_exti2_state = 0;
@@ -27,13 +29,16 @@ void GPIO_configuration(void)
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
 	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
 	// Configure PA0 and PA1 as input for toggle switches
-	GPIOA->MODER &= ~(GPIO_MODER_MODE0 | GPIO_MODER_MODE1|GPIO_MODER_MODE2|GPIO_MODER_MODE3);  // Input mode for PA0 and PA1
+	GPIOA->MODER &= ~(GPIO_MODER_MODE0 | GPIO_MODER_MODE1|GPIO_MODER_MODE7|GPIO_MODER_MODE8);  // Input mode for PA0 and PA1
 
 	GPIOA->PUPDR |= GPIO_PUPDR_PUPDR0_1;  // Pull-down for PA0
 	GPIOA->PUPDR |= GPIO_PUPDR_PUPDR1_1;  // Pull-down for PA1
-	GPIOA->PUPDR |= GPIO_PUPDR_PUPDR2_1;  // Pull-down for PA2
-	GPIOA->PUPDR |= GPIO_PUPDR_PUPDR3_1;  // Pull-down for PA3
+	GPIOA->PUPDR |= GPIO_PUPDR_PUPDR7_1;  // Pull-down for PA2
+	GPIOA->PUPDR |= GPIO_PUPDR_PUPDR8_1;  // Pull-down for PA3
 
+	 GPIOA->MODER &= ~(GPIO_MODER_MODE4 | GPIO_MODER_MODE6); // Set PA4 and PA6 as input mode
+	    // Enable pull-down resistors for PA4 and PA6 (you can also use pull-up if needed)
+	GPIOA->PUPDR |= (GPIO_PUPDR_PUPDR4_1 | GPIO_PUPDR_PUPDR6_1);
 	// Configure PA2, PA3, PA4, PA5 as input for push-button switches
 //	GPIOA->MODER &= ~(GPIO_MODER_MODE4 | GPIO_MODER_MODE5); // Input mode
 //	GPIOA->PUPDR |= GPIO_PUPDR_PUPDR4_1;  // Pull-down for PA4
@@ -44,10 +49,10 @@ void GPIO_configuration(void)
 
 	SYSCFG->EXTICR[0] &= ~(
 	    (0xF << 0)  |  // Clear EXTI0 bits
-	    (0xF << 4)  |  // Clear EXTI1 bits
-	    (0xF << 8)  |  // Clear EXTI2 bits
-	    (0xF << 12)    // Clear EXTI3 bits
+	    (0xF << 4)   // Clear EXTI1 bits
 	);
+	SYSCFG->EXTICR[1] &= ~((0xF << 4) | (0xF << 8));
+	SYSCFG->EXTICR[1] |= ((0x0 << 4) | (0x0 << 8));
 	// Set EXTI lines 0 to 3 to 0 for GPIOA
 	SYSCFG->EXTICR[0] |= (
 	    (0x0 << 0)  |  // EXTI0 -> PA0
@@ -57,27 +62,33 @@ void GPIO_configuration(void)
 	);
 	//Intrupt configuration starts here
 	// Configure EXTI0 for PA0
-	EXTI->IMR |= (1<<0)|(1<<1)|(1<<2)|(1<<3);
-	EXTI->FTSR |= (1<<0)|(1<<1)|(1<<2)|(1<<3);
-	EXTI->RTSR &= ~((1<<0)|(1<<1)|(1<<2)|(1<<3));
+	EXTI->IMR |= (1<<0)|(1<<1)|(1<<7)|(1<<8);
+	EXTI->FTSR |= (1<<0)|(1<<1)|(1<<7)|(1<<8);
+	EXTI->RTSR &= ~((1<<0)|(1<<1)|(1<<7)|(1<<8));
 	NVIC_SetPriority(EXTI0_IRQn, 1);
 	NVIC_EnableIRQ(EXTI0_IRQn);  // Enable EXTI0 interrupt for PA0
 	NVIC_SetPriority(EXTI1_IRQn, 1);
 	NVIC_EnableIRQ(EXTI1_IRQn);  // Enable EXTI1 interrupt for PA1
-	NVIC_SetPriority(EXTI2_IRQn, 1);
-	NVIC_EnableIRQ(EXTI2_IRQn);
-	NVIC_SetPriority(EXTI3_IRQn, 1);
-	NVIC_EnableIRQ(EXTI3_IRQn);
+	NVIC_SetPriority(EXTI9_5_IRQn, 1);
+	NVIC_EnableIRQ(EXTI9_5_IRQn);
 }
 void EXTI0_IRQHandler(void) {
     // Check if interrupt occurred on EXTI0 (PA0)
     if (EXTI->PR & EXTI_PR_PR0) {
         EXTI->PR = EXTI_PR_PR0;  // Clear the interrupt pending bit for EXTI0
         // Toggle action for PA0 (e.g., LED or a variable)
-        toggle_switch2^=1;  // Assume you have a function to toggle an LED or change state
-        display_on^=1;
-        GPIOA->ODR^=(1<<(5));
-        timer(100);
+        uint8_t state1 = (GPIOA->IDR & (1<<0)) != 0;
+		if (state1 && !last_exti1_state) {
+			lcd_cmd(0x01);
+			lcd_set_cursor(0,0);
+			if(FAN_TOGGLE_PIN==1){
+						lcd_print("Fan -> Manual");}
+						else{lcd_print("Fan -> Auto");}
+			FAN_TOGGLE_PIN^=1;  // Assume you have a function to toggle an LED or change state
+			timer(200);
+			menu_show_main();
+			GPIOA->ODR^=(1<<(5));
+		}
     }
 }
 
@@ -86,38 +97,44 @@ void EXTI1_IRQHandler(void) {
         EXTI->PR = EXTI_PR_PR1;
         uint8_t state = (GPIOA->IDR & (1<<1)) != 0;
         if (state && !last_exti1_state) {
-            toggle_switch1 ^= 1;
+        	lcd_cmd(0x01);
+			lcd_set_cursor(0,0);
+			if(DRIP_TOGGLE_PIN==1){
+			lcd_print("Drip -> Manual");}
+			else{lcd_print("Drip -> Auto");}
+			timer(1000);
+			menu_show_main();
+        	DRIP_TOGGLE_PIN^= 1;
             GPIOA->ODR ^= (1 << 5);
-            timer(100);
         }
         last_exti1_state = state;
     }
 }
-void EXTI2_IRQHandler(void)  {
-    if (EXTI->PR & EXTI_PR_PR2) {
-        EXTI->PR = EXTI_PR_PR2;
-
+void EXTI9_5_IRQHandler(void){
+    if (EXTI->PR & (1 << 7)) {
+        EXTI->PR = (1 << 7); // Clear pending
+        // Handle PA7 interrupt
         uint8_t state = (GPIOA->IDR & (1<<2)) != 0;
-        if (state && !last_exti2_state) {
-            NVIC_SystemReset();
-            timer(100);
-        }
-        last_exti2_state = state;
+                if (state && !last_exti2_state) {
+                    NVIC_SystemReset();
+                    timer(100);
+                }
+                last_exti2_state = state;
     }
-}
-void EXTI3_IRQHandler(void){
-    if (EXTI->PR & EXTI_PR_PR3) {
-        EXTI->PR = EXTI_PR_PR3;
-
+    if (EXTI->PR & (1 << 8)) {
+        EXTI->PR = (1 << 8); // Clear pending
+        // Handle PA8 interrupt
         uint8_t state = (GPIOA->IDR & (1<<3)) != 0;
-        if (state && !last_exti3_state) {
-            display_on ^= 1;
-            GPIOA->ODR ^= (1 << 5);
-            timer(100);
-        }
-        last_exti3_state = state;
+               if (state && !last_exti3_state) {
+                   display_on ^= 1;
+                   timer(1000);
+                   GPIOA->ODR ^= (1 << 5);
+               }
+               last_exti3_state = state;
     }
 }
+
+
 void timer_init(){
 	 RCC->AHB1ENR|=0X00000001;
 	 GPIOA->MODER|=(1<<10);
