@@ -129,21 +129,12 @@ int main(void)
     I2C1->TRISE = 17;
     I2C1->CR1 |= I2C_CR1_PE;
     lcd_init();
-
-    lcd_set_cursor(0, 0);
-    lcd_print("Hello I2C LCD");
-
-    lcd_set_cursor(1, 0);
-    lcd_print("Bare Metal I2C");
-
-
-      while (1) { }
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
     /* USER CODE END WHILE */
-
+	  process_menu();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

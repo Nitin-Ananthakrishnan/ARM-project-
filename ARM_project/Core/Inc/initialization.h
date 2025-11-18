@@ -10,8 +10,7 @@
 
 extern volatile bool toggle_switch1;
 extern volatile bool toggle_switch2;
-extern volatile bool display_on;
-
+extern bool display_on;
 
 void GPIO_configuration(void);
 void EXTI0_IRQHandler(void);

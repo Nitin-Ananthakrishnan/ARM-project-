@@ -1,6 +1,6 @@
 #include "stm32f4xx.h"
 #include "LCD.h"
-
+#include "stdbool.h"
 #define I2C_ADDR  0x27 << 1      // PCF8574 address (shifted for write)
 #define LCD_BACKLIGHT 0x08
 
@@ -8,7 +8,45 @@
 #define LCD_RW 0x02
 #define LCD_EN 0x04
 
+
+typedef enum {
+    MENU_IDLE,
+    MENU_MAIN,
+    MENU_DRIP,
+    MENU_FAN
+} MenuState;
+
+volatile uint8_t display_on = false;
+MenuState menu_state = MENU_IDLE;
+
+uint8_t drip_time = 10;      // 10 or 15
+uint8_t fan_mode = 0;        // 0 = auto, 1 = manual
+
+// ------------------ BUTTON READ -------------------
+uint8_t read_btn_pa4() { return (GPIOA->IDR & (1<<4)) != 0; }
+uint8_t read_btn_pa5() { return (GPIOA->IDR & (1<<5)) != 0; }
+volatile uint8_t last_btn_pa4 = 0;
+volatile uint8_t last_btn_pa5 = 0;
 // ------------------- DELAY --------------------
+uint8_t btn_pa4_pressed() {
+    uint8_t state = (GPIOA->IDR & (1<<4)) != 0;
+    if (state && !last_btn_pa4) { // rising edge
+        last_btn_pa4 = 1;
+        return 1;
+    }
+    last_btn_pa4 = state;
+    return 0;
+}
+
+uint8_t btn_pa5_pressed() {
+    uint8_t state = (GPIOA->IDR & (1<<5)) != 0;
+    if (state && !last_btn_pa5) {
+        last_btn_pa5 = 1;
+        return 1;
+    }
+    last_btn_pa5 = state;
+    return 0;
+}
 void delay_ms(uint32_t ms) {
     for (volatile uint32_t i = 0; i < ms * 4000; i++);
 }
@@ -88,37 +126,94 @@ void lcd_print(char* str) {
     while (*str)
         lcd_data(*str++);
 }
+void menu_delay(uint32_t ms) {
+    for (volatile uint32_t i = 0; i < ms*4000; i++);
+}
+void menu_show_main() {
+    lcd_cmd(0x01);
+    lcd_set_cursor(0,0);
+    lcd_print("Select Function:");
+    lcd_set_cursor(1,0);
+    lcd_print("1)Drip  2)Fan");
+}
 
-// ------------------- MAIN PROGRAM --------------------
-//int main(void) {
-//
-//    // Enable GPIOB and I2C1 clock
-//    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
-//    RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
-//
-//    // PB6 = SCL, PB7 = SDA → AF4
-//    GPIOB->MODER &= ~((3 << (6*2)) | (3 << (7*2)));
-//    GPIOB->MODER |=  ((2 << (6*2)) | (2 << (7*2)));
-//
-//    GPIOB->AFR[0] |= (4 << (6*4)) | (4 << (7*4));
-//
-//    // Open-drain + pull-up
-//    GPIOB->OTYPER |= (1<<6) | (1<<7);
-//    GPIOB->PUPDR |= (1<<(6*2)) | (1<<(7*2));  // pull-up
-//
-//    // I2C configuration
-//    I2C1->CR2 = 16;      // APB1 = 16 MHz
-//    I2C1->CCR = 80;      // 100 kHz
-//    I2C1->TRISE = 17;
-//    I2C1->CR1 |= I2C_CR1_PE;
-//
-//    lcd_init();
-//
-//    lcd_set_cursor(0, 0);
-//    lcd_print("Hello I2C LCD");
-//
-//    lcd_set_cursor(1, 0);
-//    lcd_print("Bare Metal I2C");
-//
-//    while (1) { }
-//}
+void menu_show_drip() {
+    lcd_cmd(0x01);
+    lcd_set_cursor(0,0);
+    lcd_print("Set Drip Time:");
+    lcd_set_cursor(1,0);
+    lcd_print("1)10m  2)15m");
+}
+
+void menu_show_fan() {
+    lcd_cmd(0x01);
+    lcd_set_cursor(0,0);
+    lcd_print("Fan Mode:");
+    lcd_set_cursor(1,0);
+    lcd_print("1)Auto 2)Manual");
+}
+
+void menu_show_message(const char *msg) {
+    lcd_cmd(0x01);
+    lcd_set_cursor(0,0);
+    lcd_print(msg);
+}
+void process_menu() {
+
+    if (!display_on) {
+        menu_state = MENU_IDLE;
+        return;
+    }
+
+    if (menu_state == MENU_IDLE) {
+        menu_state = MENU_MAIN;
+        menu_show_main();
+    }
+    if (menu_state == MENU_MAIN) {
+        if (btn_pa4_pressed()) {
+            menu_state = MENU_DRIP;
+            menu_delay(300);
+            menu_show_drip();
+        }
+        if (btn_pa5_pressed()) {
+            menu_state = MENU_FAN;
+            menu_delay(300);
+            menu_show_fan();
+        }
+        return;
+    }
+    if (menu_state == MENU_DRIP) {
+        if (btn_pa4_pressed()) {
+            drip_time = 10;
+            menu_show_message("Drip set 10 min");
+            menu_delay(2000);
+            menu_state = MENU_IDLE;
+            return;
+        }
+        if (btn_pa5_pressed()) {
+            drip_time = 15;
+            menu_show_message("Drip set 15 min");
+            menu_delay(2000);
+            menu_state = MENU_IDLE;
+            return;
+        }
+        return;
+    }
+    if (menu_state == MENU_FAN) {
+        if (btn_pa4_pressed()) {
+            fan_mode = 0; // auto
+            menu_show_message("Fan set Auto");
+            menu_delay(2000);
+            menu_state = MENU_IDLE;
+            return;
+        }
+        if (btn_pa5_pressed()) {
+            fan_mode = 1; // manual
+            menu_show_message("Fan Manual");
+            menu_delay(2000);
+            menu_state = MENU_IDLE;
+            return;
+        }
+        return;
+    }
+}

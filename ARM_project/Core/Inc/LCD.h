@@ -8,6 +8,11 @@
 #ifndef INC_LCD_H_
 #define INC_LCD_H_
 
+uint8_t read_btn_pa5();
+uint8_t read_btn_pa4() ;
+uint8_t btn_pa4_pressed();
+uint8_t btn_pa5_pressed();
+
 void delay_ms(uint32_t ms);
 void i2c_write(uint8_t data) ;
 void lcd_pulse(uint8_t data) ;
@@ -18,6 +23,12 @@ void lcd_data(uint8_t data);
 void lcd_init(void);
 void lcd_set_cursor(uint8_t row, uint8_t col);
 void lcd_print(char* str);
+void menu_delay(uint32_t ms);
+void menu_show_main() ;
+void menu_show_drip() ;
+void menu_show_fan();
+void menu_show_message(const char *msg);
+void process_menu();
 
 
 

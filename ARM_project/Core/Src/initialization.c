@@ -2,11 +2,16 @@
 //#include "stm32f4xx_hal.h"
 #include "stdbool.h"
 #include "initialization.h"  // Include the header for the declaration
+#include "LCD.h"
 
 volatile bool toggle_switch1=0;
 volatile bool toggle_switch2=0;
-volatile bool display_on=0;
+volatile uint8_t last_exti0_state = 0;
+volatile uint8_t last_exti1_state = 0;
+volatile uint8_t last_exti2_state = 0;
+volatile uint8_t last_exti3_state = 0;
 
+#define DEBOUNCE_DELAY_MS 200
 #define BIN2BCD(x) (((x / 10) << 4) | (x % 10))
 
 void test_led(){
@@ -70,40 +75,49 @@ void EXTI0_IRQHandler(void) {
         EXTI->PR = EXTI_PR_PR0;  // Clear the interrupt pending bit for EXTI0
         // Toggle action for PA0 (e.g., LED or a variable)
         toggle_switch2^=1;  // Assume you have a function to toggle an LED or change state
+        display_on^=1;
         GPIOA->ODR^=(1<<(5));
         timer(100);
     }
 }
 
 void EXTI1_IRQHandler(void) {
-    // Check if interrupt occurred on EXTI1 (PA1)
     if (EXTI->PR & EXTI_PR_PR1) {
-        EXTI->PR = EXTI_PR_PR1;  // Clear the interrupt pending bit for EXTI
-        // Toggle action for PA1 (e.g., LED or a variable)
-        toggle_switch1^=1;
-        GPIOA->ODR^=(1<<(5));
-        timer(100);
+        EXTI->PR = EXTI_PR_PR1;
+        uint8_t state = (GPIOA->IDR & (1<<1)) != 0;
+        if (state && !last_exti1_state) {
+            toggle_switch1 ^= 1;
+            GPIOA->ODR ^= (1 << 5);
+            timer(100);
+        }
+        last_exti1_state = state;
     }
 }
-void EXTI2_IRQHandler(void) {
-	if (EXTI->PR & EXTI_PR_PR2) {
-	        EXTI->PR = EXTI_PR_PR2;  // Clear the interrupt pending bit for EXTI
-	        // Toggle action for PA1 (e.g., LED or a variable)
-	        NVIC_SystemReset();
-	        timer(100);
-	    }
+void EXTI2_IRQHandler(void)  {
+    if (EXTI->PR & EXTI_PR_PR2) {
+        EXTI->PR = EXTI_PR_PR2;
 
+        uint8_t state = (GPIOA->IDR & (1<<2)) != 0;
+        if (state && !last_exti2_state) {
+            NVIC_SystemReset();
+            timer(100);
+        }
+        last_exti2_state = state;
+    }
 }
 void EXTI3_IRQHandler(void){
-	if (EXTI->PR & EXTI_PR_PR3) {
-		        EXTI->PR=EXTI_PR_PR3;  // Clear the interrupt pending bit for EXTI
-		        display_on^=1;
-		        GPIOA->ODR^=(1<<(5));
-		        timer(100);
-		    }
+    if (EXTI->PR & EXTI_PR_PR3) {
+        EXTI->PR = EXTI_PR_PR3;
 
+        uint8_t state = (GPIOA->IDR & (1<<3)) != 0;
+        if (state && !last_exti3_state) {
+            display_on ^= 1;
+            GPIOA->ODR ^= (1 << 5);
+            timer(100);
+        }
+        last_exti3_state = state;
+    }
 }
-
 void timer_init(){
 	 RCC->AHB1ENR|=0X00000001;
 	 GPIOA->MODER|=(1<<10);
