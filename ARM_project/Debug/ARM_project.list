@@ -2222,17 +2222,17 @@ void RTC_intrupt(uint8_t hours, uint8_t minutes, uint8_t seconds) {
  8001178:	4a14      	ldr	r2, [pc, #80]	@ (80011cc <RTC_intrupt+0x15c>)
  800117a:	f443 3300 	orr.w	r3, r3, #131072	@ 0x20000
  800117e:	6013      	str	r3, [r2, #0]
-	EXTI->FTSR |= EXTI_FTSR_TR17;  // Rising edge trigger
+	EXTI->FTSR &= ~EXTI_FTSR_TR17;  // Rising edge trigger
  8001180:	4b12      	ldr	r3, [pc, #72]	@ (80011cc <RTC_intrupt+0x15c>)
  8001182:	68db      	ldr	r3, [r3, #12]
  8001184:	4a11      	ldr	r2, [pc, #68]	@ (80011cc <RTC_intrupt+0x15c>)
- 8001186:	f443 3300 	orr.w	r3, r3, #131072	@ 0x20000
+ 8001186:	f423 3300 	bic.w	r3, r3, #131072	@ 0x20000
  800118a:	60d3      	str	r3, [r2, #12]
-	EXTI->RTSR &= ~EXTI_RTSR_TR17;  // Disable rising edge trigger for line 17
+	EXTI->RTSR |= EXTI_RTSR_TR17;  // Disable rising edge trigger for line 17
  800118c:	4b0f      	ldr	r3, [pc, #60]	@ (80011cc <RTC_intrupt+0x15c>)
  800118e:	689b      	ldr	r3, [r3, #8]
  8001190:	4a0e      	ldr	r2, [pc, #56]	@ (80011cc <RTC_intrupt+0x15c>)
- 8001192:	f423 3300 	bic.w	r3, r3, #131072	@ 0x20000
+ 8001192:	f443 3300 	orr.w	r3, r3, #131072	@ 0x20000
  8001196:	6093      	str	r3, [r2, #8]
 	RTC->WPR = 0xFF;
  8001198:	4b09      	ldr	r3, [pc, #36]	@ (80011c0 <RTC_intrupt+0x150>)
@@ -2271,7 +2271,7 @@ void RTC_Alarm_IRQHandler(void) {
  80011d8:	f403 7380 	and.w	r3, r3, #256	@ 0x100
  80011dc:	2b00      	cmp	r3, #0
  80011de:	d00f      	beq.n	8001200 <RTC_Alarm_IRQHandler+0x30>
-		 RTC->ISR &= ~RTC_ISR_ALRAF_Msk;    // Clear alarm flag
+		 RTC->ISR &= ~RTC_ISR_ALRAF;    // Clear alarm flag
  80011e0:	4b0a      	ldr	r3, [pc, #40]	@ (800120c <RTC_Alarm_IRQHandler+0x3c>)
  80011e2:	68db      	ldr	r3, [r3, #12]
  80011e4:	4a09      	ldr	r2, [pc, #36]	@ (800120c <RTC_Alarm_IRQHandler+0x3c>)

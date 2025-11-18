@@ -176,8 +176,8 @@ void RTC_intrupt(uint8_t hours, uint8_t minutes, uint8_t seconds) {
 	RTC->ISR &= ~RTC_ISR_ALRAF_Msk;
 	RTC->CR |= RTC_CR_ALRAIE | RTC_CR_ALRAE;
 	EXTI->IMR  |= EXTI_IMR_IM17;   // Unmask interrupt line 17
-	EXTI->FTSR |= EXTI_FTSR_TR17;  // Rising edge trigger
-	EXTI->RTSR &= ~EXTI_RTSR_TR17;  // Disable rising edge trigger for line 17
+	EXTI->FTSR &= ~EXTI_FTSR_TR17;  // Rising edge trigger
+	EXTI->RTSR |= EXTI_RTSR_TR17;  // Disable rising edge trigger for line 17
 	RTC->WPR = 0xFF;
 	PWR->CR &= ~PWR_CR_DBP;
 	NVIC_SetPriority(RTC_Alarm_IRQn, 0);
@@ -185,7 +185,7 @@ void RTC_intrupt(uint8_t hours, uint8_t minutes, uint8_t seconds) {
 }
 void RTC_Alarm_IRQHandler(void) {
 	 if (RTC->ISR & RTC_ISR_ALRAF_Msk) {
-		 RTC->ISR &= ~RTC_ISR_ALRAF_Msk;    // Clear alarm flag
+		 RTC->ISR &= ~RTC_ISR_ALRAF;    // Clear alarm flag
 		 EXTI->PR = EXTI_PR_PR17;
 		 GPIOA->ODR^=(1<<(5));
 	 }
