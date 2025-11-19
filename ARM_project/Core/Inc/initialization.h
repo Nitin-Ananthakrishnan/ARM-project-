@@ -21,5 +21,10 @@ void RTC_configuration(uint8_t hours,uint8_t minutes,uint8_t seconds);
 void RTC_intrupt(uint8_t hours, uint8_t minutes, uint8_t seconds);
 void EXTI3_IRQHandler(void);
 void test_led();
+void run_progress_timer(uint8_t mode);
+void demux_select(uint8_t value);
+void serial_init();
+void demux_select(uint8_t value);
+void run_progress_timer(uint8_t mode);
 
 #endif /* INC_INITIALIZATION_H_ */

@@ -25,8 +25,10 @@
 //#include "stm32f4xx_hal.h"
 #include "stdbool.h"
 #include"initialization.h"
+//#include"USART.h"
 #include "Functions.h"
 #include "LCD.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -101,6 +103,10 @@ int main(void)
     test_led();
     RTC_configuration(hours,minutes,seconds);
     RTC_intrupt(hours_interupt,minutes_interupt,seconds_interupt);
+//    gpio_usart_init();
+//    usart1_init();
+    //USART1_Init();
+    serial_init();
     __enable_irq();
   /* USER CODE END 2 */
     // Enable GPIOB and I2C1 clock
@@ -129,12 +135,14 @@ int main(void)
     I2C1->TRISE = 17;
     I2C1->CR1 |= I2C_CR1_PE;
     lcd_init();
+    char cmd[32];
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
     /* USER CODE END WHILE */
 	  process_menu();
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

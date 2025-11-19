@@ -289,6 +289,7 @@ void process_menu() {
         if (read_btn_pa4()) {
             fan_mode = 0; // auto
             menu_show_message("Fan on");
+            //USART1_WriteLine("Fan on");
             timer(500);
             menu_state = MENU_IDLE;
             return;
@@ -296,6 +297,7 @@ void process_menu() {
         if (read_btn_pa5()) {
             fan_mode = 1; // manual
             menu_show_message("Fan Off");
+            //USART1_WriteLine("Fan off");
             timer(500);
             menu_state = MENU_IDLE;
             return;

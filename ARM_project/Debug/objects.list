@@ -1,6 +1,6 @@
 "./Core/Src/Functions.o"
 "./Core/Src/LCD.o"
-"./Core/Src/Screen.o"
+"./Core/Src/USART.o"
 "./Core/Src/initialization.o"
 "./Core/Src/main.o"
 "./Core/Src/stm32f4xx_hal_msp.o"

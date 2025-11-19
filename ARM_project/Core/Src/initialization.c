@@ -3,6 +3,7 @@
 #include "stdbool.h"
 #include "initialization.h"  // Include the header for the declaration
 #include "LCD.h"
+#include "USART.h"
 
 volatile bool display_on = false;
 volatile bool DRIP_TOGGLE_PIN = false;
@@ -81,10 +82,11 @@ void EXTI0_IRQHandler(void) {
 		if (state1 && !last_exti1_state) {
 			lcd_cmd(0x01);
 			lcd_set_cursor(0,0);
+			FAN_TOGGLE_PIN^=1;
 			if(FAN_TOGGLE_PIN==1){
-						lcd_print("Fan -> Manual");}
-						else{lcd_print("Fan -> Auto");}
-			FAN_TOGGLE_PIN^=1;  // Assume you have a function to toggle an LED or change state
+						lcd_print("Fan -> Auto");}
+						else{lcd_print("Fan -> Manual");}
+			  // Assume you have a function to toggle an LED or change state
 			timer(200);
 			menu_show_main();
 			GPIOA->ODR^=(1<<(5));
@@ -99,12 +101,12 @@ void EXTI1_IRQHandler(void) {
         if (state && !last_exti1_state) {
         	lcd_cmd(0x01);
 			lcd_set_cursor(0,0);
+			DRIP_TOGGLE_PIN^= 1;
 			if(DRIP_TOGGLE_PIN==1){
-			lcd_print("Drip -> Manual");}
-			else{lcd_print("Drip -> Auto");}
+			lcd_print("Drip -> Auto");}
+			else{lcd_print("Drip -> Manual");}
 			timer(1000);
 			menu_show_main();
-        	DRIP_TOGGLE_PIN^= 1;
             GPIOA->ODR ^= (1 << 5);
         }
         last_exti1_state = state;
@@ -141,6 +143,86 @@ void timer_init(){
 	 GPIOA->OTYPER|=0X00000000;
 	 GPIOA->OSPEEDR|=0X00000000;
 	 GPIOA->PUPDR|=0X00000000;
+}
+void serial_init(){
+	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
+
+	    // Configure PB1, PB2, PB3 as general purpose output
+	    GPIOB->MODER &= ~((3 << (1 * 2)) | (3 << (2 * 2)) | (3 << (3 * 2))); // Clear
+	    GPIOB->MODER |=  ((1 << (1 * 2)) | (1 << (2 * 2)) | (1 << (3 * 2))); // Set as output (01)
+
+	    // Push-pull
+	    GPIOB->OTYPER &= ~((1 << 1) | (1 << 2) | (1 << 3));
+
+	    // Medium speed
+	    GPIOB->OSPEEDR |= ((1 << (1 * 2)) | (1 << (2 * 2)) | (1 << (3 * 2)));
+
+	    // No pull-up/pull-down
+	    GPIOB->PUPDR &= ~((3 << (1 * 2)) | (3 << (2 * 2)) | (3 << (3 * 2)));
+
+}
+void demux_select(uint8_t value)
+{
+    value &= 0x07;
+
+    uint8_t inv = (~value) & 0x07;   // INVERT for your wiring
+
+    if (inv & 0x01) GPIOB->BSRR = (1 << 1);
+    else            GPIOB->BSRR = (1 << (1 + 16));
+
+    if (inv & 0x02) GPIOB->BSRR = (1 << 2);
+    else            GPIOB->BSRR = (1 << (2 + 16));
+
+    if (inv & 0x04) GPIOB->BSRR = (1 << 3);
+    else            GPIOB->BSRR = (1 << (3 + 16));
+}
+
+void run_progress_timer(uint8_t mode)
+{
+    uint32_t interval;
+    uint32_t total_time;
+
+    if (mode == 1)
+    {
+        interval = 120000;    // 2 minutes
+        total_time = 600000;  // 10 minutes
+    }
+    else
+    {
+        interval = 180000;    // 3 minutes
+        total_time = 900000;  // 15 minutes
+    }
+
+    uint32_t elapsed_total = 0;
+
+    for (uint8_t step = 0; step < 5; step++)
+    {
+        uint32_t elapsed_step = 0;
+
+        while (elapsed_step < interval)
+        {
+            // Stop immediately if time finished
+            if (elapsed_total >= total_time)
+                goto END_TIMER;
+
+            demux_select(step);   // LED ON
+            timer(300);
+            elapsed_step += 300;
+            elapsed_total += 300;
+
+            if (elapsed_total >= total_time)
+                goto END_TIMER;
+
+            demux_select(7);      // LED OFF
+            timer(300);
+            elapsed_step += 300;
+            elapsed_total += 300;
+        }
+    }
+
+END_TIMER:
+    demux_select(7);  // turn all LEDs OFF and exit function
+    return;
 }
 
 void RTC_configuration(uint8_t hours,uint8_t minutes,uint8_t seconds){
@@ -187,9 +269,18 @@ void RTC_Alarm_IRQHandler(void) {
 	 if (RTC->ISR & RTC_ISR_ALRAF_Msk) {
 		 RTC->ISR &= ~RTC_ISR_ALRAF;    // Clear alarm flag
 		 EXTI->PR = EXTI_PR_PR17;
-		 GPIOA->ODR^=(1<<(5));
+		 if (DRIP_TOGGLE_PIN) {
+			 GPIOA->ODR^=(1<<(5));
+			 if(drip_time==10){
+				 //run_progress_timer(1);
+			 }
+			 if(drip_time==15){
+				 //run_progress_timer(0);
+			 }
+		 	 }
 	 }
 }
+
 
 
 

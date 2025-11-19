@@ -12,6 +12,8 @@ uint8_t read_btn_pa5();
 uint8_t read_btn_pa4() ;
 uint8_t btn_pa4_pressed();
 uint8_t btn_pa5_pressed();
+extern uint8_t drip_time;
+extern uint8_t fan_mode;
 
 void delay_ms(uint32_t ms);
 void i2c_write(uint8_t data) ;
