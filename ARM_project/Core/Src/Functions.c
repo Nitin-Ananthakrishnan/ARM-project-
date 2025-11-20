@@ -2,33 +2,35 @@
 #include "stm32f4xx_hal.h"
 #include "stdbool.h"
 #include "Functions.h"
+#include "LCD.h"
+#include <string.h>
 
 #define READ_PIN(GPIOx, PIN)   ((GPIOx->IDR & (1 << PIN)) ? 1 : 0)
 
 void ten_or_fifteen_mins_timer(uint8_t a){
-	char temp[16];
+	char temp[10];
+	lcd_cmd(0x01);
 	if (a==10){
+
 		for(uint8_t i=10;i>0;i--){
-			 HD44780_Clear();
-			 HD44780_SetCursor(0,0);
-			 HD44780_PrintStr("Time left:");
-			 sprintf(temp,"%d",i);
-			 HD44780_SetCursor(11,0);
-		     HD44780_PrintStr(temp);
-		     timer(65535);
+			lcd_set_cursor(0,0);
+			lcd_print("Time left: ");
+			lcd_set_cursor(1,0);
+			sprintf(temp, "%02d", i);
+			lcd_print(temp);
+			timer(65535);
 
 		}
+
 	}
 	if (a==15){
 			for(uint8_t i=15;i>0;i--){
-				 HD44780_Clear();
-				 HD44780_SetCursor(0,0);
-				 HD44780_PrintStr("Time left:");
-				 //sprintf(temp,"%d",i);
-				 HD44780_SetCursor(11,0);
-			     HD44780_PrintStr(temp);
-			     timer(65535);
-
+				lcd_set_cursor(0,0);
+				lcd_print("Time left: ");
+				lcd_set_cursor(1,0);
+				sprintf(temp, "%02d", i);
+				lcd_print(temp);
+				timer(65535);
 			}
 		}
 }

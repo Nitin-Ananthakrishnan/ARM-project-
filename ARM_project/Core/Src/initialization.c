@@ -3,6 +3,7 @@
 #include "stdbool.h"
 #include "initialization.h"  // Include the header for the declaration
 #include "LCD.h"
+#include "Functions.h"
 #include "USART.h"
 
 volatile bool display_on = false;
@@ -70,7 +71,7 @@ void GPIO_configuration(void)
 	NVIC_EnableIRQ(EXTI0_IRQn);  // Enable EXTI0 interrupt for PA0
 	NVIC_SetPriority(EXTI1_IRQn, 1);
 	NVIC_EnableIRQ(EXTI1_IRQn);  // Enable EXTI1 interrupt for PA1
-	NVIC_SetPriority(EXTI9_5_IRQn, 1);
+	NVIC_SetPriority(EXTI9_5_IRQn, 0);
 	NVIC_EnableIRQ(EXTI9_5_IRQn);
 }
 void EXTI0_IRQHandler(void) {
@@ -116,7 +117,7 @@ void EXTI9_5_IRQHandler(void){
     if (EXTI->PR & (1 << 7)) {
         EXTI->PR = (1 << 7); // Clear pending
         // Handle PA7 interrupt
-        uint8_t state = (GPIOA->IDR & (1<<2)) != 0;
+        uint8_t state = (GPIOA->IDR & (1<<7)) != 0;
                 if (state && !last_exti2_state) {
                     NVIC_SystemReset();
                     timer(100);
@@ -126,7 +127,7 @@ void EXTI9_5_IRQHandler(void){
     if (EXTI->PR & (1 << 8)) {
         EXTI->PR = (1 << 8); // Clear pending
         // Handle PA8 interrupt
-        uint8_t state = (GPIOA->IDR & (1<<3)) != 0;
+        uint8_t state = (GPIOA->IDR & (1<<8)) != 0;
                if (state && !last_exti3_state) {
                    display_on ^= 1;
                    timer(1000);
@@ -227,7 +228,7 @@ END_TIMER:
 
 void RTC_configuration(uint8_t hours,uint8_t minutes,uint8_t seconds){
 	RCC->APB1ENR |= RCC_APB1ENR_PWREN;
-	PWR->CR |=(1<<8);
+	PWR->CR |=(1<<8); //alarm a
 	RCC->CSR |= RCC_CSR_LSION;
 	while (!(RCC->CSR & RCC_CSR_LSIRDY)) { }  // Wait until LSI is ready
 //	RCC->BDCR &= ~RCC_BDCR_RTCEN;
@@ -272,10 +273,10 @@ void RTC_Alarm_IRQHandler(void) {
 		 if (DRIP_TOGGLE_PIN) {
 			 GPIOA->ODR^=(1<<(5));
 			 if(drip_time==10){
-				 //run_progress_timer(1);
+				 ten_or_fifteen_mins_timer(10);
 			 }
 			 if(drip_time==15){
-				 //run_progress_timer(0);
+				 ten_or_fifteen_mins_timer(15);
 			 }
 		 	 }
 	 }

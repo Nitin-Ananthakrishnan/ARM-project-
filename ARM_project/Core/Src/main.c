@@ -49,9 +49,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-//volatile int toggle_switch1=0;
-//volatile int toggle_switch2=0;
-//volatile int Display_on=0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/

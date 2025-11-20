@@ -1,4 +1,4 @@
-../Core/Src/Functions.c:8:6:ten_or_fifteen_mins_timer	5
-../Core/Src/Functions.c:35:6:BtnDebounce	2
-../Core/Src/Functions.c:42:6:timer_arr	4
-../Core/Src/Functions.c:74:6:timer	1
+../Core/Src/Functions.c:10:6:ten_or_fifteen_mins_timer	5
+../Core/Src/Functions.c:37:6:BtnDebounce	2
+../Core/Src/Functions.c:44:6:timer_arr	4
+../Core/Src/Functions.c:76:6:timer	1
