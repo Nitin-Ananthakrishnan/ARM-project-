@@ -1,3 +1,4 @@
+"./Core/Src/Comm.o"
 "./Core/Src/Functions.o"
 "./Core/Src/LCD.o"
 "./Core/Src/USART.o"

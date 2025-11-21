@@ -28,7 +28,7 @@
 //#include"USART.h"
 #include "Functions.h"
 #include "LCD.h"
-
+#include "Comm.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -104,6 +104,7 @@ int main(void)
 //    gpio_usart_init();
 //    usart1_init();
     //USART1_Init();
+    GPIO_comm_Init();
     serial_init();
     __enable_irq();
   /* USER CODE END 2 */
@@ -133,7 +134,7 @@ int main(void)
     I2C1->TRISE = 17;
     I2C1->CR1 |= I2C_CR1_PE;
     lcd_init();
-    char cmd[32];
+    //char cmd[32];
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
